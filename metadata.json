@@ -1,0 +1,7 @@
+{
+  "name": "MKZ-Household",
+  "description": "Private, professional household expense sharing and settlement portal for Asif Zia and Kashif Zia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
