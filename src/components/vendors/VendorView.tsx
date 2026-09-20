@@ -12,7 +12,7 @@ export const VendorView: React.FC = () => {
   const [business, setBusiness] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const pendingByVendor = dashboard?.pendingByVendor || {};
+  const pendingByVendor = dashboard?.pendingVendor?.byVendor || dashboard?.pendingByVendor || {};
 
   const filteredVendors = vendors.filter((v) => {
     if (!search.trim()) return true;

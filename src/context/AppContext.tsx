@@ -7,6 +7,11 @@ import {
   TabType,
   ToastMessage,
   BrotherName,
+  FinalBalanceData,
+  OpeningBalanceData,
+  ExpensesSummaryData,
+  SettlementsSummaryData,
+  PendingVendorData,
 } from '../types';
 import {
   Api,
@@ -84,111 +89,100 @@ const PIN_HUB_STORAGE_KEY = 'mkz_expenses_pin_hub_authorized';
 const SESSION_PIN_KEY = 'mkz_expenses_session_pin';
 const THEME_STORAGE_KEY = 'zia_expenses_theme';
 
-function reconcileDashboard(
-  serverDash: any,
-  expenses: Expense[],
-  settlements: Settlement[]
-): DashboardData {
-  // 1. Extract opening baseline parameters
-  let openingAmount = 33119;
-  let openingDate = '2026-07-07';
-  let openingFrom = 'Asif Zia';
-  let openingTo = 'Kashif Zia';
+function parseDashboardResponse(serverDash: any): DashboardData {
+  // 1. Opening Baseline Balance from backend response
+  const openingAmount = Number(serverDash?.openingBalance?.amount ?? serverDash?.openingAmount ?? 33119);
+  const openingDebtor = String(serverDash?.openingBalance?.debtor ?? serverDash?.openingFrom ?? 'Asif Zia').trim();
+  const openingCreditor = String(serverDash?.openingBalance?.creditor ?? serverDash?.openingTo ?? 'Kashif Zia').trim();
+  const openingDate = String(serverDash?.openingBalance?.date || serverDash?.openingDate || '2026-07-07');
 
-  if (serverDash) {
-    if (serverDash.openingBalance && typeof serverDash.openingBalance === 'object') {
-      const bAmt = Number(serverDash.openingBalance.amount);
-      if (!isNaN(bAmt) && bAmt > 0) openingAmount = bAmt;
-      if (serverDash.openingBalance.debtor) openingFrom = String(serverDash.openingBalance.debtor).trim();
-      if (serverDash.openingBalance.creditor) openingTo = String(serverDash.openingBalance.creditor).trim();
-    } else if (typeof serverDash.openingAmount === 'number' && serverDash.openingAmount > 0) {
-      openingAmount = serverDash.openingAmount;
-    }
-    if (serverDash.openingDate) openingDate = String(serverDash.openingDate);
-    if (serverDash.openingFrom) openingFrom = String(serverDash.openingFrom).trim();
-    if (serverDash.openingTo) openingTo = String(serverDash.openingTo).trim();
-  }
+  const openingBalance: OpeningBalanceData = {
+    amount: openingAmount,
+    debtor: openingDebtor,
+    creditor: openingCreditor,
+    date: openingDate,
+  };
 
-  // 2. Extract server final balance if present
-  let serverProvidedOutstanding: number | null = null;
-  if (serverDash) {
-    if (typeof serverDash.currentOutstanding === 'number') {
-      serverProvidedOutstanding = serverDash.currentOutstanding;
-    } else if (serverDash.finalBalance && typeof serverDash.finalBalance === 'object') {
-      const signed = serverDash.finalBalance.signedAsifPerspective ?? serverDash.finalBalance.amount;
-      if (typeof signed === 'number' && !isNaN(signed)) {
-        serverProvidedOutstanding = signed;
-      }
-    }
-  }
+  // 2. Current Outstanding Final Balance from backend response
+  let finalAmount = 0;
+  let finalDebtor = 'Asif Zia';
+  let finalCreditor = 'Kashif Zia';
+  let signedOutstanding = 0;
 
-  // 3. Compute live expense split and pending liabilities from loaded expenses
-  let kashifPaid = 0;
-  let asifPaid = 0;
-  let pendingVendorAsif = 0;
-  let pendingVendorKashif = 0;
-  const pendingByVendor: Record<string, { amount: number; payer: 'Asif Zia' | 'Kashif Zia' }> = {};
-
-  const openDateObj = new Date(openingDate);
-  const validOpenDate = !isNaN(openDateObj.getTime()) ? openDateObj : new Date('2026-07-07');
-
-  for (const exp of expenses) {
-    const amt = Number(exp.amount) || 0;
-    if (amt <= 0) continue;
-    const isUnpaid = String(exp.status || '').toLowerCase() === 'unpaid';
-    const isKashif = String(exp.paidBy || '').toLowerCase().includes('kashif');
-    const isAsif = String(exp.paidBy || '').toLowerCase().includes('asif');
-
-    if (isUnpaid) {
-      if (isAsif) pendingVendorAsif += amt;
-      if (isKashif) pendingVendorKashif += amt;
-      const vKey = exp.vendor || '(Vendor not entered)';
-      if (!pendingByVendor[vKey]) {
-        pendingByVendor[vKey] = { amount: 0, payer: isKashif ? 'Kashif Zia' : 'Asif Zia' };
-      }
-      pendingByVendor[vKey].amount += amt;
+  if (serverDash?.finalBalance && typeof serverDash.finalBalance === 'object') {
+    finalAmount = Number(serverDash.finalBalance.amount) || 0;
+    finalDebtor = String(serverDash.finalBalance.debtor || '').trim();
+    finalCreditor = String(serverDash.finalBalance.creditor || '').trim();
+    if (serverDash.finalBalance.signedAsifPerspective !== undefined) {
+      signedOutstanding = Number(serverDash.finalBalance.signedAsifPerspective) || 0;
     } else {
-      const expDate = new Date(exp.date);
-      if (isNaN(expDate.getTime()) || expDate >= validOpenDate) {
-        if (isKashif) kashifPaid += amt;
-        if (isAsif) asifPaid += amt;
-      }
+      signedOutstanding = finalDebtor.toLowerCase().includes('asif') ? finalAmount : -finalAmount;
     }
+  } else if (typeof serverDash?.currentOutstanding === 'number') {
+    signedOutstanding = serverDash.currentOutstanding;
+    finalAmount = Math.abs(serverDash.currentOutstanding);
+    finalDebtor = serverDash.currentOutstanding >= 0 ? 'Asif Zia' : 'Kashif Zia';
+    finalCreditor = serverDash.currentOutstanding >= 0 ? 'Kashif Zia' : 'Asif Zia';
   }
 
-  // 4. Compute settlement ledger transfers
-  let asifToKashif = 0;
-  let kashifToAsif = 0;
-  for (const s of settlements) {
-    const amt = Number(s.amount) || 0;
-    const from = String(s.paidFrom || '').toLowerCase();
-    const to = String(s.paidTo || '').toLowerCase();
-    if (from.includes('asif') && to.includes('kashif')) asifToKashif += amt;
-    if (from.includes('kashif') && to.includes('asif')) kashifToAsif += amt;
-  }
+  const finalBalance: FinalBalanceData = {
+    amount: finalAmount,
+    debtor: finalDebtor,
+    creditor: finalCreditor,
+    signedAsifPerspective: signedOutstanding,
+  };
 
-  // 5. Calculate net balance movement and current outstanding
-  const netFromExpenses = (kashifPaid - asifPaid) / 2;
-  const netSinceOpening = netFromExpenses - asifToKashif + kashifToAsif;
-  const openingSigned = (openingFrom.toLowerCase().includes('asif')) ? openingAmount : -openingAmount;
-  const liveComputedOutstanding = Math.round(openingSigned + netSinceOpening);
+  // 3. Expenses summary (netFromExpenses, asifPaid, kashifPaid) directly from backend
+  const asifPaid = Number(serverDash?.expenses?.asifPaid ?? 0);
+  const kashifPaid = Number(serverDash?.expenses?.kashifPaid ?? 0);
+  const netFromExpenses = Number(serverDash?.expenses?.netFromExpenses ?? serverDash?.netSinceOpening ?? 0);
+  const halfShare = Number(serverDash?.expenses?.halfShare ?? ((asifPaid + kashifPaid) / 2));
+  const expensesTotal = Number(serverDash?.expenses?.total ?? (asifPaid + kashifPaid));
 
-  // If expenses are loaded, our live computed balance includes both post-opening expenses and settlements
-  let finalOutstanding = liveComputedOutstanding;
-  if (expenses.length === 0 && serverProvidedOutstanding !== null) {
-    finalOutstanding = serverProvidedOutstanding;
-  }
+  const expenses: ExpensesSummaryData = {
+    total: expensesTotal,
+    asifPaid,
+    kashifPaid,
+    halfShare,
+    netFromExpenses,
+  };
+
+  // 4. Pending vendor dues directly from backend (pendingVendor.byVendor, .asif, .kashif)
+  const pendingByVendor = serverDash?.pendingVendor?.byVendor ?? serverDash?.pendingByVendor ?? {};
+  const pendingAsif = Number(serverDash?.pendingVendor?.asif ?? serverDash?.pendingVendorAsif ?? 0);
+  const pendingKashif = Number(serverDash?.pendingVendor?.kashif ?? serverDash?.pendingVendorKashif ?? 0);
+
+  const pendingVendor: PendingVendorData = {
+    byVendor: pendingByVendor,
+    asif: pendingAsif,
+    kashif: pendingKashif,
+  };
+
+  // 5. Settlements summary
+  const settlements: SettlementsSummaryData = {
+    total: Number(serverDash?.settlements?.total ?? 0),
+    asifToKashif: Number(serverDash?.settlements?.asifToKashif ?? 0),
+    kashifToAsif: Number(serverDash?.settlements?.kashifToAsif ?? 0),
+    netSettlement: Number(serverDash?.settlements?.netSettlement ?? 0),
+  };
 
   return {
+    finalBalance,
+    openingBalance,
+    expenses,
+    pendingVendor,
+    settlements,
+
+    // Backward-compatibility properties
     openingDate,
     openingAmount,
-    openingFrom,
-    openingTo,
-    netSinceOpening: Math.round(netSinceOpening),
-    currentOutstanding: finalOutstanding,
-    pendingVendorAsif: pendingVendorAsif || (serverDash?.pendingVendorAsif ?? 0),
-    pendingVendorKashif: pendingVendorKashif || (serverDash?.pendingVendorKashif ?? 0),
-    pendingByVendor: Object.keys(pendingByVendor).length > 0 ? pendingByVendor : (serverDash?.pendingByVendor ?? {}),
+    openingFrom: openingDebtor,
+    openingTo: openingCreditor,
+    netSinceOpening: netFromExpenses,
+    currentOutstanding: signedOutstanding,
+    pendingVendorAsif: pendingAsif,
+    pendingVendorKashif: pendingKashif,
+    pendingByVendor,
   };
 }
 
@@ -418,9 +412,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const loadedSettlements = setRes.data || [];
 
-      // Reconcile and calculate authoritative dashboard figures
-      const computedDash = reconcileDashboard(dashRes.data, loadedExpenses, loadedSettlements);
-      setDashboard(computedDash);
+      // Directly parse authoritative dashboard figures from ?action=dashboard
+      const authoritativeDash = parseDashboardResponse(dashRes.data);
+      setDashboard(authoritativeDash);
 
       if (expRes.data) {
         setExpenses(loadedExpenses);

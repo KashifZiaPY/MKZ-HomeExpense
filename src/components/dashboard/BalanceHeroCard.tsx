@@ -15,8 +15,28 @@ import { motion } from 'motion/react';
 export const BalanceHeroCard: React.FC = () => {
   const { dashboard, setActiveTab, setSettlementPreFillAmount, isPinHubAuthorized, requirePinAuth } = useApp();
 
-  const outstanding = dashboard?.currentOutstanding ?? 0;
-  const balanceInfo = getBalanceStatus(outstanding);
+  const finalBalance = dashboard?.finalBalance;
+  const openingBalance = dashboard?.openingBalance;
+  const expenses = dashboard?.expenses;
+
+  const amount = finalBalance?.amount ?? 0;
+  const debtor = finalBalance?.debtor ?? '';
+  const creditor = finalBalance?.creditor ?? '';
+
+  const isSettled = amount === 0 || !debtor || debtor === creditor;
+  const isAsifDebtor = debtor.toLowerCase().includes('asif');
+
+  const badgeColor = isSettled
+    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+    : isAsifDebtor
+    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+    : 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+
+  const subtitle = isSettled
+    ? 'Neither brother owes any household money'
+    : isAsifDebtor
+    ? 'Asif needs to reimburse Kashif 50% share'
+    : 'Kashif needs to reimburse Asif 50% share';
 
   const handleAddExpenseClick = () => {
     if (!isPinHubAuthorized) {
@@ -29,8 +49,8 @@ export const BalanceHeroCard: React.FC = () => {
   };
 
   const handleSettleUp = () => {
-    if (balanceInfo.amount > 0) {
-      setSettlementPreFillAmount(balanceInfo.amount);
+    if (amount > 0) {
+      setSettlementPreFillAmount(amount);
     }
     if (!isPinHubAuthorized) {
       requirePinAuth(() => {
@@ -60,10 +80,10 @@ export const BalanceHeroCard: React.FC = () => {
             </span>
           </div>
 
-          {dashboard?.openingDate && (
+          {(openingBalance?.date || dashboard?.openingDate) && (
             <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-800/50 px-2 sm:px-2.5 py-1 rounded-md border border-slate-800">
               <Calendar className="w-3 h-3 text-slate-400" />
-              <span>Baseline: {formatDate(dashboard.openingDate)}</span>
+              <span>Baseline: {formatDate(openingBalance?.date || dashboard?.openingDate)}</span>
             </div>
           )}
         </div>
@@ -72,25 +92,23 @@ export const BalanceHeroCard: React.FC = () => {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-3">
             <motion.h2
-              key={outstanding}
+              key={amount}
               initial={{ scale: 0.98, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-3xl sm:text-5xl font-black tracking-tight text-white"
             >
-              {formatPKR(Math.abs(outstanding))}
+              {formatPKR(amount)}
             </motion.h2>
 
             <span
-              className={`inline-flex items-center self-start sm:self-center px-2.5 py-0.5 rounded-md text-xs font-bold border ${balanceInfo.badgeColor}`}
+              className={`inline-flex items-center self-start sm:self-center px-2.5 py-0.5 rounded-md text-xs font-bold border ${badgeColor}`}
             >
-              {balanceInfo.status === 'asif_owes' && 'Asif Zia owes Kashif Zia'}
-              {balanceInfo.status === 'kashif_owes' && 'Kashif Zia owes Asif Zia'}
-              {balanceInfo.status === 'settled' && 'Fully Settled (0.00)'}
+              {isSettled ? 'Fully Settled (0.00)' : `${debtor} owes ${creditor}`}
             </span>
           </div>
 
           <p className="text-xs sm:text-sm text-slate-300 mt-1.5 font-medium">
-            {balanceInfo.subtitle}
+            {subtitle}
           </p>
         </div>
 
@@ -101,7 +119,7 @@ export const BalanceHeroCard: React.FC = () => {
               Net Movement
             </span>
             <p className="text-sm sm:text-base font-bold text-white mt-0.5">
-              {formatPKR(dashboard?.netSinceOpening ?? outstanding)}
+              {formatPKR(expenses?.netFromExpenses ?? 0)}
             </p>
           </div>
 
@@ -110,10 +128,10 @@ export const BalanceHeroCard: React.FC = () => {
               Baseline Opening
             </span>
             <p className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">
-              {formatPKR(dashboard?.openingAmount ?? 0)}{' '}
-              {dashboard?.openingFrom && (
+              {formatPKR(openingBalance?.amount ?? 0)}{' '}
+              {openingBalance?.debtor && (
                 <span className="text-[11px] text-slate-400 font-normal">
-                  ({dashboard.openingFrom} ➔ {dashboard.openingTo})
+                  ({openingBalance.debtor} ➔ {openingBalance.creditor})
                 </span>
               )}
             </p>
@@ -137,7 +155,7 @@ export const BalanceHeroCard: React.FC = () => {
             className="col-span-1 flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-3 sm:px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm border border-slate-700 active:scale-[0.98] transition-all cursor-pointer"
           >
             <ArrowLeftRight className="w-4 h-4 text-indigo-300" />
-            <span className="truncate">{balanceInfo.status !== 'settled' ? 'Settle Up' : 'Settlement'}</span>
+            <span className="truncate">{!isSettled ? 'Settle Up' : 'Settlement'}</span>
           </button>
 
           <button

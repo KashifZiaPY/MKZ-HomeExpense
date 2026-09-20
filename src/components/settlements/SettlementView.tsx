@@ -30,7 +30,7 @@ export const SettlementView: React.FC = () => {
     isPinHubAuthorized,
   } = useApp();
 
-  const outstanding = dashboard?.currentOutstanding ?? 0;
+  const outstanding = dashboard?.finalBalance?.signedAsifPerspective ?? dashboard?.currentOutstanding ?? 0;
   const balanceInfo = getBalanceStatus(outstanding);
 
   // Form State

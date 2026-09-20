@@ -7,7 +7,50 @@ export interface PendingVendorItem {
   payer: BrotherName | string;
 }
 
+export interface FinalBalanceData {
+  amount: number;
+  debtor: BrotherName | string;
+  creditor: BrotherName | string;
+  signedAsifPerspective?: number;
+}
+
+export interface OpeningBalanceData {
+  amount: number;
+  debtor: BrotherName | string;
+  creditor: BrotherName | string;
+  date?: string;
+}
+
+export interface ExpensesSummaryData {
+  total?: number;
+  asifPaid: number;
+  kashifPaid: number;
+  halfShare?: number;
+  netFromExpenses: number;
+}
+
+export interface SettlementsSummaryData {
+  total?: number;
+  asifToKashif?: number;
+  kashifToAsif?: number;
+  netSettlement?: number;
+}
+
+export interface PendingVendorData {
+  byVendor: Record<string, PendingVendorItem>;
+  asif: number;
+  kashif: number;
+}
+
 export interface DashboardData {
+  // Authoritative fields from GET ?action=dashboard
+  finalBalance: FinalBalanceData;
+  openingBalance: OpeningBalanceData;
+  expenses: ExpensesSummaryData;
+  settlements?: SettlementsSummaryData;
+  pendingVendor: PendingVendorData;
+
+  // Convenience & backward-compatibility properties
   openingDate: string;
   openingAmount: number;
   openingFrom: BrotherName | string;

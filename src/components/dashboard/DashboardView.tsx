@@ -48,13 +48,9 @@ export const DashboardView: React.FC = () => {
   const totalThisMonth = thisMonthExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   const totalAllTime = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  const asifTotal = expenses
-    .filter((e) => e.paidBy === 'Asif Zia')
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  const kashifTotal = expenses
-    .filter((e) => e.paidBy === 'Kashif Zia')
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  // Authoritative Fronted totals and share owed from GET ?action=dashboard
+  const asifFronted = dashboard?.expenses?.asifPaid ?? 0;
+  const kashifFronted = dashboard?.expenses?.kashifPaid ?? 0;
 
   return (
     <div id="dashboard-view" className="max-w-7xl mx-auto space-y-6">
@@ -121,10 +117,10 @@ export const DashboardView: React.FC = () => {
             </span>
           </div>
           <p className="text-lg sm:text-xl font-black text-rose-700 dark:text-rose-300 mt-1">
-            {formatPKR(asifTotal)}
+            {formatPKR(asifFronted)}
           </p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Share owed by Kashif: {formatPKR(asifTotal / 2)}
+            Share owed by Kashif: {formatPKR(asifFronted / 2)}
           </p>
         </div>
 
@@ -138,10 +134,10 @@ export const DashboardView: React.FC = () => {
             </span>
           </div>
           <p className="text-lg sm:text-xl font-black text-sky-700 dark:text-sky-300 mt-1">
-            {formatPKR(kashifTotal)}
+            {formatPKR(kashifFronted)}
           </p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Share owed by Asif: {formatPKR(kashifTotal / 2)}
+            Share owed by Asif: {formatPKR(kashifFronted / 2)}
           </p>
         </div>
       </div>

@@ -43,6 +43,41 @@ export function setDemoModeExplicit(enable: boolean) {
 
 // Initial realistic Zia Household sample data for seamless offline preview / fallback
 let mockDashboard: DashboardData = {
+  finalBalance: {
+    amount: 4250,
+    debtor: 'Asif Zia',
+    creditor: 'Kashif Zia',
+    signedAsifPerspective: 4250,
+  },
+  openingBalance: {
+    amount: 0,
+    debtor: 'Asif Zia',
+    creditor: 'Kashif Zia',
+    date: '2026-09-01',
+  },
+  expenses: {
+    total: 31770,
+    asifPaid: 12010,
+    kashifPaid: 16420,
+    halfShare: 14215,
+    netFromExpenses: 2205,
+  },
+  settlements: {
+    total: 20500,
+    asifToKashif: 12000,
+    kashifToAsif: 8500,
+    netSettlement: 3500,
+  },
+  pendingVendor: {
+    byVendor: {
+      'Hafiz Sirhandi': {
+        amount: 3320,
+        payer: 'Asif Zia',
+      },
+    },
+    asif: 3320,
+    kashif: 0,
+  },
   openingDate: '2026-09-01',
   openingAmount: 0,
   openingFrom: 'Asif Zia',
@@ -215,8 +250,30 @@ function updateMockDashboard() {
     }
   }
 
+  const absOutstanding = Math.abs(currentOutstanding);
+  const debtor = currentOutstanding >= 0 ? 'Asif Zia' : 'Kashif Zia';
+  const creditor = currentOutstanding >= 0 ? 'Kashif Zia' : 'Asif Zia';
+
   mockDashboard = {
     ...mockDashboard,
+    finalBalance: {
+      amount: absOutstanding,
+      debtor: absOutstanding === 0 ? '' : debtor,
+      creditor: absOutstanding === 0 ? '' : creditor,
+      signedAsifPerspective: currentOutstanding,
+    },
+    expenses: {
+      total: asifPaid + kashifPaid,
+      asifPaid,
+      kashifPaid,
+      halfShare: (asifPaid + kashifPaid) / 2,
+      netFromExpenses: Math.round(rawExpenseDiff),
+    },
+    pendingVendor: {
+      byVendor: pendingByVendor,
+      asif: pendingVendorAsif,
+      kashif: pendingVendorKashif,
+    },
     netSinceOpening: currentOutstanding,
     currentOutstanding,
     pendingVendorAsif,

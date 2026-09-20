@@ -16,11 +16,12 @@ export const VendorDuesCard: React.FC = () => {
     setActiveTab('vendors');
   };
 
-  const pendingByVendor = dashboard?.pendingByVendor || {};
+  const pendingVendor = dashboard?.pendingVendor;
+  const pendingByVendor = pendingVendor?.byVendor || dashboard?.pendingByVendor || {};
   const vendorEntries = Object.entries(pendingByVendor);
 
-  const pendingAsif = dashboard?.pendingVendorAsif ?? 0;
-  const pendingKashif = dashboard?.pendingVendorKashif ?? 0;
+  const pendingAsif = pendingVendor?.asif ?? dashboard?.pendingVendorAsif ?? 0;
+  const pendingKashif = pendingVendor?.kashif ?? dashboard?.pendingVendorKashif ?? 0;
   const totalPending = pendingAsif + pendingKashif;
 
   return (
