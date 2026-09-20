@@ -367,11 +367,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const lockPinHub = () => {
+  const lockPinHub = (showNotification: boolean = true) => {
     setIsPinHubAuthorized(false);
     sessionStorage.removeItem(PIN_HUB_STORAGE_KEY);
-    showToast('PIN Hub Locked', 'Modifications now require PIN', 'info');
+    sessionPinRef.current = '';
+    setSessionPin('');
+    sessionStorage.removeItem(SESSION_PIN_KEY);
+    if (showNotification) {
+      showToast('PIN Hub Locked', 'Modifications now require PIN', 'info');
+    }
   };
+
+  // 1. Page Visibility API: Clear PIN authentication immediately when tab is hidden (app switch, screen lock, minimized)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        setIsPinHubAuthorized(false);
+        sessionStorage.removeItem(PIN_HUB_STORAGE_KEY);
+        sessionPinRef.current = '';
+        setSessionPin('');
+        sessionStorage.removeItem(SESSION_PIN_KEY);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // 2. 15-minute Idle Timeout: Backup auto-lock if the tab stays in the foreground without user activity
+  useEffect(() => {
+    const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const resetIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+      idleTimer = setTimeout(() => {
+        setIsPinHubAuthorized(false);
+        sessionStorage.removeItem(PIN_HUB_STORAGE_KEY);
+        sessionPinRef.current = '';
+        setSessionPin('');
+        sessionStorage.removeItem(SESSION_PIN_KEY);
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const userEvents: Array<keyof WindowEventMap> = [
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'touchstart',
+      'scroll',
+      'click',
+    ];
+
+    userEvents.forEach((evt) => {
+      window.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+
+    // Start initial timer
+    resetIdleTimer();
+
+    return () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+      userEvents.forEach((evt) => {
+        window.removeEventListener(evt, resetIdleTimer);
+      });
+    };
+  }, []);
 
   const closePinHubModal = () => {
     setIsPinHubModalOpen(false);
