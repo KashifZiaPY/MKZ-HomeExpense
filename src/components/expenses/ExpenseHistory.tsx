@@ -22,8 +22,10 @@ import {
   X,
   Shield,
   Info,
+  FileText,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
+import { ExportPdfModal } from '../common/ExportPdfModal';
 
 export const ExpenseHistory: React.FC = () => {
   const { expenses, categories, vendors, deleteExpense, setActiveTab, loading, requirePinAuth, showToast } = useApp();
@@ -37,10 +39,11 @@ export const ExpenseHistory: React.FC = () => {
   const [selectedVendor, setSelectedVendor] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
 
-  // Viewing, Editing and Deleting States
+  // Viewing, Editing, Deleting and Export States
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   // LIFO Rule: Determine the last recorded entry in the ledger (highest serial or last index)
   const lastEntry = useMemo(() => {
@@ -212,7 +215,16 @@ export const ExpenseHistory: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            id="export-pdf-history-btn"
+            onClick={() => setIsPdfModalOpen(true)}
+            className="flex-1 sm:flex-initial justify-center px-3 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/60 dark:bg-indigo-950/40 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/60 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Export PDF</span>
+          </button>
+
           <button
             id="export-csv-btn"
             onClick={handleExportCSV}
@@ -233,6 +245,13 @@ export const ExpenseHistory: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Export PDF Modal */}
+      <ExportPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        defaultMonth={selectedMonth !== 'all' ? selectedMonth : undefined}
+      />
 
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">

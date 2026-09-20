@@ -25,8 +25,11 @@ import {
   Tag,
   ArrowRight,
   Sparkles,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
+import { ExportPdfModal } from '../common/ExportPdfModal';
 
 const CATEGORY_COLORS = [
   '#f59e0b', // amber-500
@@ -46,6 +49,7 @@ const CATEGORY_COLORS = [
 export const ReportsView: React.FC = () => {
   const { expenses, settlements, theme } = useApp();
   const isDark = theme === 'dark';
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   // 1. Monthly Spending Trend (with Asif vs Kashif breakdown)
   const monthlyData = useMemo(() => {
@@ -118,15 +122,32 @@ export const ReportsView: React.FC = () => {
 
   return (
     <div id="reports-view" className="max-w-7xl mx-auto space-y-6">
-      {/* Title */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Spending Reports & Analytics
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Client-side computed household analytics and brother payment distributions
-        </p>
+      {/* Title & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Spending Reports & Analytics
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Client-side computed household analytics and brother payment distributions
+          </p>
+        </div>
+
+        <button
+          id="reports-export-pdf-btn"
+          onClick={() => setIsPdfModalOpen(true)}
+          className="self-start sm:self-auto px-4 py-2.5 rounded-2xl bg-[#1a2744] hover:bg-[#24355a] text-white font-bold text-xs shadow-md shadow-slate-900/10 active:scale-95 transition-all flex items-center gap-2 cursor-pointer border border-slate-700/50"
+        >
+          <FileText className="w-4 h-4 text-indigo-300" />
+          <span>Export PDF</span>
+        </button>
       </div>
+
+      {/* Export PDF Modal */}
+      <ExportPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+      />
 
       {/* Top 3 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
