@@ -26,19 +26,19 @@ export const VendorDuesCard: React.FC = () => {
   return (
     <div
       id="vendor-dues-card"
-      className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm"
+      className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="p-2.5 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400">
-            <Store className="w-5 h-5" />
+          <div className="p-2 sm:p-2.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400 shrink-0">
+            <Store className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
               Pending Vendor Dues
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
               Unpaid shopkeeper accounts (Kiryana, Milk, etc.)
             </p>
           </div>
@@ -47,37 +47,38 @@ export const VendorDuesCard: React.FC = () => {
         <button
           id="view-all-vendors-btn"
           onClick={handleViewAllVendors}
-          className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+          className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 px-2 sm:px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shrink-0 border border-amber-200/60 dark:border-amber-900/60"
         >
-          View All <ArrowRight className="w-3 h-3" />
+          <span>View All</span>
+          <ArrowRight className="w-3 h-3" />
         </button>
       </div>
 
       {/* Summary Chips: Total, Asif's pending, Kashif's pending */}
-      <div className="grid grid-cols-3 gap-2.5 mb-5">
-        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
-          <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 mb-4 sm:mb-5">
+        <div className="p-2 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
             Total Dues
           </span>
-          <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+          <p className="text-xs sm:text-base font-black text-slate-900 dark:text-white mt-0.5 truncate">
             {formatPKR(totalPending)}
           </p>
         </div>
 
-        <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-center">
-          <span className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
-            Asif's Vendors
+        <div className="p-2 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-center">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400 block truncate">
+            Asif's Dues
           </span>
-          <p className="text-sm sm:text-base font-extrabold text-rose-700 dark:text-rose-300 mt-0.5">
+          <p className="text-xs sm:text-base font-black text-rose-700 dark:text-rose-300 mt-0.5 truncate">
             {formatPKR(pendingAsif)}
           </p>
         </div>
 
-        <div className="p-3 rounded-2xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/40 text-center">
-          <span className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
-            Kashif's Vendors
+        <div className="p-2 sm:p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/40 text-center">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400 block truncate">
+            Kashif's Dues
           </span>
-          <p className="text-sm sm:text-base font-extrabold text-sky-700 dark:text-sky-300 mt-0.5">
+          <p className="text-xs sm:text-base font-black text-sky-700 dark:text-sky-300 mt-0.5 truncate">
             {formatPKR(pendingKashif)}
           </p>
         </div>

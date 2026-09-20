@@ -24,18 +24,18 @@ export const RecentActivity: React.FC = () => {
   return (
     <div
       id="recent-activity-card"
-      className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm"
+      className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="p-2.5 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-400">
-            <Clock className="w-5 h-5" />
+          <div className="p-2 sm:p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-400 shrink-0">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
               Recent Activity
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
               Latest expenses & reimbursement transactions
             </p>
           </div>
@@ -44,9 +44,10 @@ export const RecentActivity: React.FC = () => {
         <button
           id="view-all-history-btn"
           onClick={() => setActiveTab('expenses')}
-          className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+          className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 sm:px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shrink-0 border border-blue-200/60 dark:border-blue-900/60"
         >
-          View Full Log <ArrowRight className="w-3 h-3" />
+          <span>View Log</span>
+          <ArrowRight className="w-3 h-3" />
         </button>
       </div>
 

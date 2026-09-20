@@ -93,9 +93,10 @@ export const Navigation: React.FC = () => {
       {/* Mobile Bottom Navigation Bar */}
       <nav
         id="mobile-bottom-nav"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 shadow-2xl safe-area-pb"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-1.5 py-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 6px)' }}
       >
-        <div className="grid grid-cols-6 gap-1 items-center max-w-md mx-auto">
+        <div className="grid grid-cols-6 gap-0.5 items-center max-w-lg mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -106,28 +107,26 @@ export const Navigation: React.FC = () => {
                 key={item.id}
                 id={`mobile-nav-btn-${item.id}`}
                 onClick={() => handleTabClick(item.id)}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer ${
+                className={`flex flex-col items-center justify-center py-1 px-0.5 rounded-lg transition-all cursor-pointer active:scale-95 ${
                   isActive
-                    ? isAdd
-                      ? 'text-indigo-700 dark:text-indigo-400 font-bold'
-                      : 'text-indigo-600 dark:text-indigo-400 font-bold'
-                    : 'text-slate-500 dark:text-slate-400 font-medium'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <div
-                  className={`p-1.5 rounded-xl transition-all ${
+                  className={`p-1 rounded-lg transition-all ${
                     isAdd
                       ? isActive
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300'
                       : isActive
                       ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400'
                       : ''
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4.5 h-4.5" />
                 </div>
-                <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-full">
+                <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-full font-semibold">
                   {item.shortLabel}
                 </span>
               </button>

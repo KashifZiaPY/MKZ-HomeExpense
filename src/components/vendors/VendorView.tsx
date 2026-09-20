@@ -88,7 +88,7 @@ export const VendorView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Add Vendor Form (Left / Top) */}
-        <div className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
             <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
               <Plus className="w-5 h-5" />
@@ -147,7 +147,7 @@ export const VendorView: React.FC = () => {
         </div>
 
         {/* Vendors List (Right) */}
-        <div className="lg:col-span-8 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="lg:col-span-8 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <Store className="w-5 h-5 text-slate-400" />

@@ -202,7 +202,7 @@ export const ExpenseHistory: React.FC = () => {
   return (
     <div id="expense-history-container" className="max-w-7xl mx-auto space-y-6">
       {/* Top Header & Export */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Household Expense Records
@@ -212,12 +212,12 @@ export const ExpenseHistory: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             id="export-csv-btn"
             onClick={handleExportCSV}
             disabled={filteredExpenses.length === 0}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40"
+            className="flex-1 sm:flex-initial justify-center px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -226,7 +226,7 @@ export const ExpenseHistory: React.FC = () => {
           <button
             id="history-add-expense-btn"
             onClick={() => setActiveTab('add-expense')}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
             <span>Add Expense</span>
@@ -235,7 +235,7 @@ export const ExpenseHistory: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3.5">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
         {/* Search input */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
