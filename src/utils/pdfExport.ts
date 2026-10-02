@@ -113,10 +113,10 @@ export function generateHouseholdPdfReport(
   const openingIsSettled = openingAmount === 0 || !openingDebtor || openingDebtor === openingCreditor;
 
   let openingText = 'Fully Settled (Rs. 0)';
-  let openingPlainDesc = 'Accounts were balanced (Rs. 0)';
+  let openingSummaryDesc = 'Accounts were balanced (Rs. 0)';
   if (!openingIsSettled) {
-    openingText = `${formatPdfPKR(openingAmount)} (${openingDebtor} owed ${openingCreditor})`;
-    openingPlainDesc = `${openingDebtor} owed ${openingCreditor} ${formatPdfPKR(openingAmount)}`;
+    openingText = `${formatPdfPKR(openingAmount)} (${openingDebtor} to pay ${openingCreditor})`;
+    openingSummaryDesc = `${openingDebtor} payable to ${openingCreditor}: ${formatPdfPKR(openingAmount)}`;
   }
 
   // 2. Total Expenses Recorded (This Period) = sum of ALL expenses in the date range, Paid + Unpaid combined
@@ -152,29 +152,29 @@ export function generateHouseholdPdfReport(
   let balanceText = 'Fully Settled (Rs. 0)';
   let kashifPosition = 'Rs. 0 (Balanced)';
   let asifPosition = 'Rs. 0 (Balanced)';
-  let plainEnglishNetHeadline = '';
-  let plainEnglishAction = '';
+  let executiveNetHeadline = '';
+  let executiveAction = '';
 
   if (isSettled) {
     balanceText = 'Fully Settled (Rs. 0)';
-    kashifPosition = 'Rs. 0 (No receivable / payable)';
-    asifPosition = 'Rs. 0 (No receivable / payable)';
-    plainEnglishNetHeadline = 'All household balances are fully settled. Neither brother owes any amount to the other.';
-    plainEnglishAction = 'No settlement payment is required at this time.';
+    kashifPosition = 'Rs. 0 (No payment pending)';
+    asifPosition = 'Rs. 0 (No payment pending)';
+    executiveNetHeadline = 'All household balances are fully settled. Neither brother has any pending payment to the other.';
+    executiveAction = 'No settlement payment is required at this time.';
   } else if (debtor.toLowerCase().includes('asif')) {
-    // Asif owes Kashif -> Kashif has RECEIVABLE, Asif has PAYABLE
-    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Asif Zia owes Kashif Zia)`;
+    // Asif pays Kashif -> Kashif is Receivable, Asif is Payable
+    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Asif Zia to pay Kashif Zia)`;
     kashifPosition = `Receivable: ${formatPdfPKR(currentOutstandingAmount)} (from Asif Zia)`;
     asifPosition = `Payable: ${formatPdfPKR(currentOutstandingAmount)} (to Kashif Zia)`;
-    plainEnglishNetHeadline = `Kashif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Asif Zia (Asif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia).`;
-    plainEnglishAction = `To settle the account, Asif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia.`;
+    executiveNetHeadline = `Kashif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Asif Zia (Asif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia).`;
+    executiveAction = `To settle the account, Asif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia.`;
   } else {
-    // Kashif owes Asif -> Asif has RECEIVABLE, Kashif has PAYABLE
-    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Kashif Zia owes Asif Zia)`;
+    // Kashif pays Asif -> Asif is Receivable, Kashif is Payable
+    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Kashif Zia to pay Asif Zia)`;
     kashifPosition = `Payable: ${formatPdfPKR(currentOutstandingAmount)} (to Asif Zia)`;
     asifPosition = `Receivable: ${formatPdfPKR(currentOutstandingAmount)} (from Kashif Zia)`;
-    plainEnglishNetHeadline = `Asif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Kashif Zia (Kashif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia).`;
-    plainEnglishAction = `To settle the account, Kashif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia.`;
+    executiveNetHeadline = `Asif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Kashif Zia (Kashif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia).`;
+    executiveAction = `To settle the account, Kashif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia.`;
   }
 
   let cursorY = 14;
@@ -212,7 +212,7 @@ export function generateHouseholdPdfReport(
     doc.text('1. SUMMARY OVERVIEW & NET POSITION', margin, cursorY);
     cursorY += 4;
 
-    // Plain English Executive Summary Callout Box
+    // Executive Summary Callout Box
     const calloutBoxY = cursorY;
     const calloutPadding = 4;
     const calloutWidth = contentWidth;
@@ -221,9 +221,9 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     const textLines = [
-      `• Net Balance: ${plainEnglishNetHeadline}`,
-      `• Action Required: ${plainEnglishAction}`,
-      `• Baseline Opening (${openingDateFormatted}): ${openingPlainDesc}`,
+      `• Net Balance: ${executiveNetHeadline}`,
+      `• Action Required: ${executiveAction}`,
+      `• Baseline Opening (${openingDateFormatted}): ${openingSummaryDesc}`,
       `• Period Spend Fronted: Asif fronted ${formatPdfPKR(asifFrontedPeriod)} | Kashif fronted ${formatPdfPKR(kashifFrontedPeriod)} | Settlements paid: ${formatPdfPKR(totalSettlementsPeriod)}`,
     ];
 
@@ -252,7 +252,7 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(26, 39, 68);
-    doc.text('EXECUTIVE SUMMARY (PLAIN ENGLISH):', margin + calloutPadding + 2, textCursor);
+    doc.text('EXECUTIVE SUMMARY & BALANCE POSITION:', margin + calloutPadding + 2, textCursor);
     textCursor += 4.5;
 
     textLines.forEach((line, idx) => {
@@ -281,7 +281,7 @@ export function generateHouseholdPdfReport(
       [
         `Baseline Opening Balance (as of ${openingDateFormatted})`,
         openingText,
-        'Historical starting ledger balance before current period activity',
+        'Starting ledger balance before current period activity',
       ],
       [
         'Total Expenses Recorded (This Period)',
@@ -312,10 +312,10 @@ export function generateHouseholdPdfReport(
         'Kashif Zia Net Position',
         kashifPosition,
         debtor.toLowerCase().includes('asif') && !isSettled
-          ? 'Kashif is owed this amount (money to receive from Asif)'
+          ? 'Kashif will receive this amount from Asif'
           : !isSettled
           ? 'Kashif needs to pay this amount to Asif'
-          : 'Even (no money owed)',
+          : 'Balanced (Rs. 0 / Even)',
       ],
       [
         'Asif Zia Net Position',
@@ -323,8 +323,8 @@ export function generateHouseholdPdfReport(
         debtor.toLowerCase().includes('asif') && !isSettled
           ? 'Asif needs to pay this amount to Kashif'
           : !isSettled
-          ? 'Asif is owed this amount (money to receive from Kashif)'
-          : 'Even (no money owed)',
+          ? 'Asif will receive this amount from Kashif'
+          : 'Balanced (Rs. 0 / Even)',
       ],
     ];
 
@@ -438,6 +438,7 @@ export function generateHouseholdPdfReport(
         head: [['Date', 'Category', 'Details', 'Amount', 'Paid By', 'Vendor', 'Status']],
         body: expenseTableBody,
         foot: [totalRow],
+        showFoot: 'lastPage',
         theme: 'striped',
         headStyles: {
           fillColor: [26, 39, 68],
@@ -527,6 +528,7 @@ export function generateHouseholdPdfReport(
         head: [['Date', 'Paid From', 'Paid To', 'Amount', 'Notes / Reference']],
         body: settlementTableBody,
         foot: [totalRow],
+        showFoot: 'lastPage',
         theme: 'striped',
         headStyles: {
           fillColor: [26, 39, 68],
@@ -612,9 +614,10 @@ export function generateHouseholdPdfReport(
       autoTable(doc, {
         startY: cursorY,
         margin: { left: margin, right: margin },
-        head: [['Vendor', 'Amount Owed', 'To Be Paid By']],
+        head: [['Vendor', 'Amount Payable', 'To Be Paid By']],
         body: vendorRows,
         foot: [totalRow],
+        showFoot: 'lastPage',
         theme: 'grid',
         headStyles: {
           fillColor: [26, 39, 68],
