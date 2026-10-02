@@ -73,10 +73,68 @@ export function generateHouseholdPdfReport(
   const fromFormatted = formatDate(options.fromDate, 'dd MMM yyyy');
   const toFormatted = formatDate(options.toDate, 'dd MMM yyyy');
 
-  // Filter expenses by date range
+  // -------------------------------------------------------------
+  // FINANCIAL LEDGER RECONCILIATION & PERIOD ACCOUNTING
+  // Convention: Signed Asif perspective (Positive = Asif Zia pays Kashif Zia; Negative = Kashif Zia pays Asif Zia)
+  // -------------------------------------------------------------
   const fromNorm = options.fromDate;
   const toNorm = options.toDate;
 
+  // 1. Starting Baseline Balance (from backend/settings, e.g. 07-Jul-2026)
+  const baselineAmount = Number(dashboard?.openingBalance?.amount ?? dashboard?.openingAmount ?? 0);
+  const baselineDateRaw = dashboard?.openingBalance?.date || dashboard?.openingDate || '';
+  const baselineDebtor = dashboard?.openingBalance?.debtor || dashboard?.openingFrom || 'Asif Zia';
+  const baselineCreditor = dashboard?.openingBalance?.creditor || dashboard?.openingTo || 'Kashif Zia';
+
+  // Baseline signed value: positive if Asif owes Kashif, negative if Kashif owes Asif
+  const baselineSigned = baselineDebtor.toLowerCase().includes('asif') ? baselineAmount : -baselineAmount;
+
+  // 2. Prior Period Activity (all entries before fromNorm)
+  let priorAsifPaid = 0;
+  let priorKashifPaid = 0;
+  let priorAsifToKashifSettlement = 0;
+  let priorKashifToAsifSettlement = 0;
+
+  expenses.forEach((exp) => {
+    const expDate = normalizeDate(exp.date);
+    if (!expDate) return;
+    if (expDate < fromNorm) {
+      const isPaid = String(exp.status || '').trim().toLowerCase() === 'paid';
+      if (!isPaid) return;
+      const amt = Number(exp.amount) || 0;
+      const payer = String(exp.paidBy || '').trim().toLowerCase();
+      if (payer.includes('asif')) priorAsifPaid += amt;
+      else if (payer.includes('kashif')) priorKashifPaid += amt;
+    }
+  });
+
+  settlements.forEach((s) => {
+    const sDate = normalizeDate(s.date);
+    if (!sDate) return;
+    if (sDate < fromNorm) {
+      const amt = Number(s.amount) || 0;
+      const from = String(s.paidFrom || '').trim().toLowerCase();
+      const to = String(s.paidTo || '').trim().toLowerCase();
+      if (from.includes('asif') && to.includes('kashif')) priorAsifToKashifSettlement += amt;
+      else if (from.includes('kashif') && to.includes('asif')) priorKashifToAsifSettlement += amt;
+    }
+  });
+
+  // Period Opening Balance = Baseline + Prior Net Expenses - Prior Net Settlements
+  const priorNetExpenseMovement = (priorKashifPaid - priorAsifPaid) / 2;
+  const priorNetSettlements = priorAsifToKashifSettlement - priorKashifToAsifSettlement;
+  const periodOpeningSigned = baselineSigned + priorNetExpenseMovement - priorNetSettlements;
+  const periodOpeningAmount = Math.abs(periodOpeningSigned);
+  const periodOpeningDebtor = periodOpeningSigned > 0.001 ? 'Asif Zia' : (periodOpeningSigned < -0.001 ? 'Kashif Zia' : '');
+  const periodOpeningCreditor = periodOpeningSigned > 0.001 ? 'Kashif Zia' : (periodOpeningSigned < -0.001 ? 'Asif Zia' : '');
+  const periodOpeningIsSettled = Math.abs(periodOpeningSigned) < 0.01;
+
+  let periodOpeningText = 'Fully Settled (Rs. 0)';
+  if (!periodOpeningIsSettled) {
+    periodOpeningText = `${formatPdfPKR(periodOpeningAmount)} (${periodOpeningDebtor} to pay ${periodOpeningCreditor})`;
+  }
+
+  // 3. Current Period Activity (fromNorm <= date <= toNorm)
   const periodExpenses = expenses.filter((e) => {
     const expDate = normalizeDate(e.date);
     if (!expDate) return false;
@@ -103,79 +161,76 @@ export function generateHouseholdPdfReport(
     return da.localeCompare(db);
   });
 
-  // Calculations for Summary
-  // 1. Opening Balance details
-  const openingAmount = Number(dashboard?.openingBalance?.amount ?? dashboard?.openingAmount ?? 0);
-  const openingDateRaw = dashboard?.openingBalance?.date || dashboard?.openingDate || '';
-  const openingDateFormatted = openingDateRaw ? formatDate(openingDateRaw, 'dd MMM yyyy') : 'Baseline';
-  const openingDebtor = dashboard?.openingBalance?.debtor || dashboard?.openingFrom || '';
-  const openingCreditor = dashboard?.openingBalance?.creditor || dashboard?.openingTo || '';
-  const openingIsSettled = openingAmount === 0 || !openingDebtor || openingDebtor === openingCreditor;
-
-  let openingText = 'Fully Settled (Rs. 0)';
-  let openingSummaryDesc = 'Accounts were balanced (Rs. 0)';
-  if (!openingIsSettled) {
-    openingText = `${formatPdfPKR(openingAmount)} (${openingDebtor} to pay ${openingCreditor})`;
-    openingSummaryDesc = `${openingDebtor} payable to ${openingCreditor}: ${formatPdfPKR(openingAmount)}`;
-  }
-
-  // 2. Total Expenses Recorded (This Period) = sum of ALL expenses in the date range, Paid + Unpaid combined
   const totalRecordedPeriod = periodExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  // 3. Asif & Kashif Fronted = sum of amounts, filtered to ONLY status = "Paid" AND within the date range
   let asifFrontedPeriod = 0;
   let kashifFrontedPeriod = 0;
 
   periodExpenses.forEach((exp) => {
-    const amt = Number(exp.amount) || 0;
     const isPaid = String(exp.status || '').trim().toLowerCase() === 'paid';
     if (!isPaid) return; // Unpaid is NOT fronted yet
-
+    const amt = Number(exp.amount) || 0;
     const payer = String(exp.paidBy || '').trim().toLowerCase();
-    if (payer.includes('asif')) {
-      asifFrontedPeriod += amt;
-    } else if (payer.includes('kashif')) {
-      kashifFrontedPeriod += amt;
-    }
+    if (payer.includes('asif')) asifFrontedPeriod += amt;
+    else if (payer.includes('kashif')) kashifFrontedPeriod += amt;
   });
 
-  // 4. Period Settlements
-  const totalSettlementsPeriod = periodSettlements.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  let asifToKashifPeriodSettlement = 0;
+  let kashifToAsifPeriodSettlement = 0;
+  periodSettlements.forEach((s) => {
+    const amt = Number(s.amount) || 0;
+    const from = String(s.paidFrom || '').trim().toLowerCase();
+    const to = String(s.paidTo || '').trim().toLowerCase();
+    if (from.includes('asif') && to.includes('kashif')) asifToKashifPeriodSettlement += amt;
+    else if (from.includes('kashif') && to.includes('asif')) kashifToAsifPeriodSettlement += amt;
+  });
 
-  // 5. Current Outstanding Balance = pulled directly from live ?action=dashboard finalBalance
-  const finalBalance = dashboard?.finalBalance;
-  const currentOutstandingAmount = Number(finalBalance?.amount ?? Math.abs(dashboard?.currentOutstanding ?? 0));
-  const debtor = finalBalance?.debtor || (dashboard?.currentOutstanding && dashboard.currentOutstanding > 0 ? 'Asif Zia' : 'Kashif Zia');
-  const creditor = finalBalance?.creditor || (dashboard?.currentOutstanding && dashboard.currentOutstanding > 0 ? 'Kashif Zia' : 'Asif Zia');
-  const isSettled = currentOutstandingAmount === 0 || !debtor || debtor === creditor;
+  const totalSettlementsPeriod = asifToKashifPeriodSettlement + kashifToAsifPeriodSettlement;
+  const periodNetExpenseMovement = (kashifFrontedPeriod - asifFrontedPeriod) / 2;
+  const periodNetSettlementMovement = asifToKashifPeriodSettlement - kashifToAsifPeriodSettlement;
+  const periodTotalNetMovement = periodNetExpenseMovement - periodNetSettlementMovement;
 
-  let balanceText = 'Fully Settled (Rs. 0)';
-  let kashifPosition = 'Rs. 0 (Balanced)';
-  let asifPosition = 'Rs. 0 (Balanced)';
+  // 4. Period Closing Balance (as of toNorm)
+  const periodClosingSigned = periodOpeningSigned + periodTotalNetMovement;
+  const periodClosingAmount = Math.abs(periodClosingSigned);
+  const periodClosingDebtor = periodClosingSigned > 0.001 ? 'Asif Zia' : (periodClosingSigned < -0.001 ? 'Kashif Zia' : '');
+  const periodClosingCreditor = periodClosingSigned > 0.001 ? 'Kashif Zia' : (periodClosingSigned < -0.001 ? 'Asif Zia' : '');
+  const periodClosingIsSettled = Math.abs(periodClosingSigned) < 0.01;
+
+  let periodClosingText = 'Fully Settled (Rs. 0)';
+  let kashifPeriodPosition = 'Rs. 0 (Balanced)';
+  let asifPeriodPosition = 'Rs. 0 (Balanced)';
   let executiveNetHeadline = '';
   let executiveAction = '';
 
-  if (isSettled) {
-    balanceText = 'Fully Settled (Rs. 0)';
-    kashifPosition = 'Rs. 0 (No payment pending)';
-    asifPosition = 'Rs. 0 (No payment pending)';
-    executiveNetHeadline = 'All household balances are fully settled. Neither brother has any pending payment to the other.';
-    executiveAction = 'No settlement payment is required at this time.';
-  } else if (debtor.toLowerCase().includes('asif')) {
-    // Asif pays Kashif -> Kashif is Receivable, Asif is Payable
-    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Asif Zia to pay Kashif Zia)`;
-    kashifPosition = `Receivable: ${formatPdfPKR(currentOutstandingAmount)} (from Asif Zia)`;
-    asifPosition = `Payable: ${formatPdfPKR(currentOutstandingAmount)} (to Kashif Zia)`;
-    executiveNetHeadline = `Kashif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Asif Zia (Asif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia).`;
-    executiveAction = `To settle the account, Asif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Kashif Zia.`;
+  if (periodClosingIsSettled) {
+    periodClosingText = 'Fully Settled (Rs. 0)';
+    kashifPeriodPosition = 'Rs. 0 (No payment pending)';
+    asifPeriodPosition = 'Rs. 0 (No payment pending)';
+    executiveNetHeadline = `All balances for this report period (${fromFormatted} – ${toFormatted}) are fully settled (Rs. 0).`;
+    executiveAction = `No settlement payment is required for this report period.`;
+  } else if (periodClosingSigned > 0) {
+    // Asif pays Kashif
+    periodClosingText = `${formatPdfPKR(periodClosingAmount)} (Asif Zia to pay Kashif Zia)`;
+    kashifPeriodPosition = `Receivable: ${formatPdfPKR(periodClosingAmount)} (from Asif Zia)`;
+    asifPeriodPosition = `Payable: ${formatPdfPKR(periodClosingAmount)} (to Kashif Zia)`;
+    executiveNetHeadline = `For this report period (${fromFormatted} – ${toFormatted}), Kashif Zia is RECEIVABLE ${formatPdfPKR(periodClosingAmount)} from Asif Zia (Asif Zia has a net payable of ${formatPdfPKR(periodClosingAmount)} to Kashif Zia).`;
+    executiveAction = `To settle this report period, Asif Zia needs to pay ${formatPdfPKR(periodClosingAmount)} to Kashif Zia.`;
   } else {
-    // Kashif pays Asif -> Asif is Receivable, Kashif is Payable
-    balanceText = `${formatPdfPKR(currentOutstandingAmount)} (Kashif Zia to pay Asif Zia)`;
-    kashifPosition = `Payable: ${formatPdfPKR(currentOutstandingAmount)} (to Asif Zia)`;
-    asifPosition = `Receivable: ${formatPdfPKR(currentOutstandingAmount)} (from Kashif Zia)`;
-    executiveNetHeadline = `Asif Zia is RECEIVABLE ${formatPdfPKR(currentOutstandingAmount)} from Kashif Zia (Kashif Zia has a net payable of ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia).`;
-    executiveAction = `To settle the account, Kashif Zia needs to pay ${formatPdfPKR(currentOutstandingAmount)} to Asif Zia.`;
+    // Kashif pays Asif
+    periodClosingText = `${formatPdfPKR(periodClosingAmount)} (Kashif Zia to pay Asif Zia)`;
+    kashifPeriodPosition = `Payable: ${formatPdfPKR(periodClosingAmount)} (to Asif Zia)`;
+    asifPeriodPosition = `Receivable: ${formatPdfPKR(periodClosingAmount)} (from Kashif Zia)`;
+    executiveNetHeadline = `For this report period (${fromFormatted} – ${toFormatted}), Asif Zia is RECEIVABLE ${formatPdfPKR(periodClosingAmount)} from Kashif Zia (Kashif Zia has a net payable of ${formatPdfPKR(periodClosingAmount)} to Asif Zia).`;
+    executiveAction = `To settle this report period, Kashif Zia needs to pay ${formatPdfPKR(periodClosingAmount)} to Asif Zia.`;
   }
+
+  // 5. Live Current Overall Balance (as of today, for live reference)
+  const finalBalance = dashboard?.finalBalance;
+  const liveOutstandingAmount = Number(finalBalance?.amount ?? Math.abs(dashboard?.currentOutstanding ?? 0));
+  const liveDebtor = finalBalance?.debtor || (dashboard?.currentOutstanding && dashboard.currentOutstanding > 0 ? 'Asif Zia' : 'Kashif Zia');
+  const liveCreditor = finalBalance?.creditor || (dashboard?.currentOutstanding && dashboard.currentOutstanding > 0 ? 'Kashif Zia' : 'Asif Zia');
+  const liveIsSettled = liveOutstandingAmount === 0 || !liveDebtor || liveDebtor === liveCreditor;
+  const liveBalanceText = liveIsSettled ? 'Fully Settled (Rs. 0)' : `${formatPdfPKR(liveOutstandingAmount)} (${liveDebtor} to pay ${liveCreditor})`;
 
   let cursorY = 14;
 
@@ -209,7 +264,7 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(26, 39, 68); // #1a2744
-    doc.text('1. SUMMARY OVERVIEW & NET POSITION', margin, cursorY);
+    doc.text('1. SUMMARY OVERVIEW & RECONCILED POSITION', margin, cursorY);
     cursorY += 4;
 
     // Executive Summary Callout Box
@@ -221,10 +276,11 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     const textLines = [
-      `• Net Balance: ${executiveNetHeadline}`,
+      `• Period Closing Position (${toFormatted}): ${executiveNetHeadline}`,
       `• Action Required: ${executiveAction}`,
-      `• Baseline Opening (${openingDateFormatted}): ${openingSummaryDesc}`,
-      `• Period Spend Fronted: Asif fronted ${formatPdfPKR(asifFrontedPeriod)} | Kashif fronted ${formatPdfPKR(kashifFrontedPeriod)} | Settlements paid: ${formatPdfPKR(totalSettlementsPeriod)}`,
+      `• Period Reconciliation: Started at ${periodOpeningText} on ${fromFormatted} | Net Period Change: ${periodTotalNetMovement >= 0 ? '+' : ''}${formatPdfPKR(periodTotalNetMovement)} | Closing at ${periodClosingText}`,
+      `• Period Activity: Asif fronted ${formatPdfPKR(asifFrontedPeriod)} | Kashif fronted ${formatPdfPKR(kashifFrontedPeriod)} | Settlements paid: ${formatPdfPKR(totalSettlementsPeriod)}`,
+      `• Live Overall Household Balance (as of ${todayStr}): ${liveBalanceText}`,
     ];
 
     // Calculate box height based on wrapped lines
@@ -244,7 +300,7 @@ export function generateHouseholdPdfReport(
     doc.roundedRect(margin, calloutBoxY, calloutWidth, estimatedHeight, 2, 2, 'FD');
 
     // Left accent bar (indigo / emerald)
-    doc.setFillColor(isSettled ? 16 : 79, isSettled ? 185 : 70, isSettled ? 129 : 229);
+    doc.setFillColor(periodClosingIsSettled ? 16 : 79, periodClosingIsSettled ? 185 : 70, periodClosingIsSettled ? 129 : 229);
     doc.roundedRect(margin, calloutBoxY, 2.5, estimatedHeight, 1, 1, 'F');
 
     // Callout Content
@@ -252,7 +308,7 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(26, 39, 68);
-    doc.text('EXECUTIVE SUMMARY & BALANCE POSITION:', margin + calloutPadding + 2, textCursor);
+    doc.text('EXECUTIVE SUMMARY & RECONCILED POSITION:', margin + calloutPadding + 2, textCursor);
     textCursor += 4.5;
 
     textLines.forEach((line, idx) => {
@@ -260,11 +316,15 @@ export function generateHouseholdPdfReport(
       if (idx === 0) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.2);
-        doc.setTextColor(isSettled ? 4 : 190, isSettled ? 120 : 18, isSettled ? 87 : 60); // emerald or rose
+        doc.setTextColor(periodClosingIsSettled ? 4 : 190, periodClosingIsSettled ? 120 : 18, periodClosingIsSettled ? 87 : 60); // emerald or rose
       } else if (idx === 1) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(30, 41, 59); // slate-800
+      } else if (idx === 2) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 58, 138); // blue-900
       } else {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.8);
@@ -276,12 +336,12 @@ export function generateHouseholdPdfReport(
 
     cursorY = calloutBoxY + estimatedHeight + 5;
 
-    // Summary Table with clear breakdown including Opening Balance & Net Payables
+    // Summary Table with mathematically reconciled breakdown
     const summaryRows = [
       [
-        `Baseline Opening Balance (as of ${openingDateFormatted})`,
-        openingText,
-        'Starting ledger balance before current period activity',
+        `Period Opening Balance (as of ${fromFormatted})`,
+        periodOpeningText,
+        `Net brought-forward ledger balance at start of report period (${fromFormatted})`,
       ],
       [
         'Total Expenses Recorded (This Period)',
@@ -299,32 +359,44 @@ export function generateHouseholdPdfReport(
         'Vendor-paid expenses only (excludes Unpaid bills)',
       ],
       [
+        'Net Expense Movement (50% Share)',
+        `${periodNetExpenseMovement >= 0 ? '+' : ''}${formatPdfPKR(periodNetExpenseMovement)}`,
+        periodNetExpenseMovement >= 0
+          ? 'Asif share of Kashif spend (+ adds to Asif payable)'
+          : 'Kashif share of Asif spend (+ adds to Kashif payable)',
+      ],
+      [
         'Direct Settlements Paid (This Period)',
         formatPdfPKR(totalSettlementsPeriod),
         'Direct brother-to-brother reimbursement transfers in date range',
       ],
       [
-        `Current Outstanding Balance (as of ${todayStr})`,
-        balanceText,
-        'Live overall household balance computed from all entries to date',
+        `Period Closing Balance (as of ${toFormatted})`,
+        periodClosingText,
+        `Reconciled net balance at the end of this report period (${toFormatted})`,
       ],
       [
-        'Kashif Zia Net Position',
-        kashifPosition,
-        debtor.toLowerCase().includes('asif') && !isSettled
+        'Kashif Zia Net Position (Period End)',
+        kashifPeriodPosition,
+        periodClosingSigned > 0.001
           ? 'Kashif will receive this amount from Asif'
-          : !isSettled
+          : periodClosingSigned < -0.001
           ? 'Kashif needs to pay this amount to Asif'
           : 'Balanced (Rs. 0 / Even)',
       ],
       [
-        'Asif Zia Net Position',
-        asifPosition,
-        debtor.toLowerCase().includes('asif') && !isSettled
+        'Asif Zia Net Position (Period End)',
+        asifPeriodPosition,
+        periodClosingSigned > 0.001
           ? 'Asif needs to pay this amount to Kashif'
-          : !isSettled
+          : periodClosingSigned < -0.001
           ? 'Asif will receive this amount from Kashif'
           : 'Balanced (Rs. 0 / Even)',
+      ],
+      [
+        `Current Live Overall Balance (as of ${todayStr})`,
+        liveBalanceText,
+        'Live overall household balance as of today across all entries to date',
       ],
     ];
 
@@ -347,32 +419,39 @@ export function generateHouseholdPdfReport(
         2: { cellWidth: 'auto', fontSize: 7.5, textColor: [100, 116, 139] },
       },
       didParseCell: (data) => {
-        // Highlight Opening Balance row (index 0)
+        // Highlight Period Opening Balance row (index 0)
         if (data.section === 'body' && data.row.index === 0) {
           data.cell.styles.fillColor = [248, 250, 252]; // slate-50
           if (data.column.index === 1) {
             data.cell.styles.textColor = [30, 58, 138]; // blue-900
           }
         }
-        // Highlight Current Outstanding Balance row (index 5)
-        if (data.section === 'body' && data.row.index === 5) {
+        // Highlight Period Closing Balance row (index 6)
+        if (data.section === 'body' && data.row.index === 6) {
           data.cell.styles.fillColor = [241, 245, 249]; // slate-100
           if (data.column.index === 1) {
-            data.cell.styles.textColor = isSettled ? [4, 120, 87] : [190, 18, 60]; // emerald or rose
+            data.cell.styles.textColor = periodClosingIsSettled ? [4, 120, 87] : [190, 18, 60]; // emerald or rose
           }
         }
-        // Highlight Kashif Position row (index 6)
-        if (data.section === 'body' && data.row.index === 6) {
-          data.cell.styles.fillColor = [255, 255, 255];
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = debtor.toLowerCase().includes('asif') && !isSettled ? [4, 120, 87] : [30, 41, 59];
-          }
-        }
-        // Highlight Asif Position row (index 7)
+        // Highlight Kashif Position row (index 7)
         if (data.section === 'body' && data.row.index === 7) {
           data.cell.styles.fillColor = [255, 255, 255];
           if (data.column.index === 1) {
-            data.cell.styles.textColor = debtor.toLowerCase().includes('asif') && !isSettled ? [190, 18, 60] : [4, 120, 87];
+            data.cell.styles.textColor = periodClosingSigned > 0.001 ? [4, 120, 87] : [30, 41, 59];
+          }
+        }
+        // Highlight Asif Position row (index 8)
+        if (data.section === 'body' && data.row.index === 8) {
+          data.cell.styles.fillColor = [255, 255, 255];
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = periodClosingSigned > 0.001 ? [190, 18, 60] : [4, 120, 87];
+          }
+        }
+        // Highlight Current Live Overall Balance row (index 9)
+        if (data.section === 'body' && data.row.index === 9) {
+          data.cell.styles.fillColor = [248, 250, 252]; // slate-50
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = [71, 85, 105]; // slate-600
           }
         }
       },
