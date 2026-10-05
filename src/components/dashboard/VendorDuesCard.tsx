@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatPKR } from '../../utils/formatters';
 import { Store, UserCheck, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { SettleVendorModal } from '../vendors/SettleVendorModal';
 
 export const VendorDuesCard: React.FC = () => {
   const { dashboard, setActiveTab, isPinHubAuthorized, requirePinAuth } = useApp();
+
+  const [settlingVendor, setSettlingVendor] = useState<{
+    vendorName: string;
+    amount: number;
+    payer?: string;
+  } | null>(null);
 
   const handleViewAllVendors = () => {
     if (!isPinHubAuthorized) {
@@ -125,19 +132,42 @@ export const VendorDuesCard: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 flex flex-col items-end">
                   <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                     {formatPKR(item.amount)}
                   </span>
                   <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase">
                     Unpaid
                   </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettlingVendor({
+                        vendorName,
+                        amount: item.amount,
+                        payer: item.payer,
+                      })
+                    }
+                    className="mt-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-[11px] font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Settle</span>
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Settle Vendor Modal */}
+      <SettleVendorModal
+        isOpen={Boolean(settlingVendor)}
+        onClose={() => setSettlingVendor(null)}
+        vendorName={settlingVendor?.vendorName || ''}
+        initialAmount={settlingVendor?.amount}
+        initialPayer={settlingVendor?.payer}
+      />
     </div>
   );
 };

@@ -74,6 +74,12 @@ interface AppContextType {
   deleteExpense: (id: string | number) => Promise<boolean>;
   addSettlement: (payload: Omit<Settlement, 'id'>) => Promise<boolean>;
   addVendor: (payload: Omit<Vendor, 'id'>) => Promise<boolean>;
+  batchSettleVendorDues: (params: {
+    vendorName: string;
+    paidBy: BrotherName;
+    paymentDate: string;
+    paymentNote?: string;
+  }) => Promise<{ success: boolean; updatedCount: number; error?: string }>;
   updateApiUrl: (url: string) => void;
   toggleDemoMode: (enable: boolean) => void;
 
@@ -653,6 +659,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const batchSettleVendorDues = async (params: {
+    vendorName: string;
+    paidBy: BrotherName;
+    paymentDate: string;
+    paymentNote?: string;
+  }): Promise<{ success: boolean; updatedCount: number; error?: string }> => {
+    const { vendorName, paidBy, paymentDate, paymentNote } = params;
+
+    const targetExpenses = expenses.filter(
+      (e) =>
+        e.status === 'Unpaid' &&
+        e.vendor &&
+        e.vendor.trim().toLowerCase() === vendorName.trim().toLowerCase()
+    );
+
+    if (targetExpenses.length === 0) {
+      showToast('No Unpaid Dues', `No pending unpaid entries found for ${vendorName}`, 'info');
+      return { success: false, updatedCount: 0, error: 'No unpaid entries found' };
+    }
+
+    const effectivePin = getEffectivePin();
+
+    // 1. Optimistic local update so UI responds instantly
+    const noteSuffix = paymentNote
+      ? ` [${paymentNote}]`
+      : ` [Lump-sum cleared on ${paymentDate} by ${paidBy}]`;
+
+    setExpenses((prev) =>
+      prev.map((e) => {
+        if (
+          e.status === 'Unpaid' &&
+          e.vendor &&
+          e.vendor.trim().toLowerCase() === vendorName.trim().toLowerCase()
+        ) {
+          return {
+            ...e,
+            status: 'Paid' as const,
+            paidBy,
+            details: `${e.details}${noteSuffix}`,
+          };
+        }
+        return e;
+      })
+    );
+
+    showToast('Clearing vendor dues...', `Updating ${targetExpenses.length} entries for ${vendorName}`, 'info');
+
+    try {
+      let count = 0;
+      for (const exp of targetExpenses) {
+        const updatedExpense: Expense = {
+          ...exp,
+          status: 'Paid',
+          paidBy,
+          details: `${exp.details}${noteSuffix}`,
+        };
+        const res = await Api.updateExpense(updatedExpense, effectivePin);
+        if (!res.error) {
+          count++;
+        }
+      }
+
+      showToast(
+        'Vendor Dues Cleared!',
+        `Successfully marked ${count} voucher(s) as Paid by ${paidBy} for ${vendorName}`,
+        'success'
+      );
+
+      await refreshAll(true);
+      return { success: true, updatedCount: count };
+    } catch (err: any) {
+      console.error('Batch vendor settlement failed:', err);
+      showToast('Settlement Error', err?.message || 'Failed to complete batch settlement', 'error');
+      await refreshAll(true);
+      return { success: false, updatedCount: 0, error: err?.message };
+    }
+  };
+
   const updateApiUrl = (url: string) => {
     setStoredApiUrl(url);
     setApiUrlState(url);
@@ -714,6 +798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteExpense,
         addSettlement,
         addVendor,
+        batchSettleVendorDues,
         updateApiUrl,
         toggleDemoMode,
         settlementPreFillAmount,

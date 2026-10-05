@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { formatPKR } from '../../utils/formatters';
 import { Vendor } from '../../types';
 import { Store, Plus, Search, Tag, Building2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { SettleVendorModal } from './SettleVendorModal';
 
 export const VendorView: React.FC = () => {
   const { vendors, dashboard, addVendor, setActiveTab, showToast, requirePinAuth, isPinHubAuthorized } = useApp();
@@ -11,6 +12,11 @@ export const VendorView: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [business, setBusiness] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [settlingVendor, setSettlingVendor] = useState<{
+    vendorName: string;
+    amount: number;
+    payer?: string;
+  } | null>(null);
 
   const pendingByVendor = dashboard?.pendingVendor?.byVendor || dashboard?.pendingByVendor || {};
 
@@ -203,13 +209,27 @@ export const VendorView: React.FC = () => {
                       </div>
 
                       {hasPending && (
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 flex flex-col items-end">
                           <span className="text-xs font-black text-amber-700 dark:text-amber-300 block">
                             {formatPKR(pendingInfo.amount)}
                           </span>
                           <span className="text-[10px] text-amber-800 dark:text-amber-400 font-semibold uppercase">
                             Due from {pendingInfo.payer?.split(' ')[0]}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSettlingVendor({
+                                vendorName: v.name,
+                                amount: pendingInfo.amount,
+                                payer: pendingInfo.payer,
+                              })
+                            }
+                            className="mt-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Settle Dues</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -227,6 +247,15 @@ export const VendorView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Settle Vendor Modal */}
+      <SettleVendorModal
+        isOpen={Boolean(settlingVendor)}
+        onClose={() => setSettlingVendor(null)}
+        vendorName={settlingVendor?.vendorName || ''}
+        initialAmount={settlingVendor?.amount}
+        initialPayer={settlingVendor?.payer}
+      />
     </div>
   );
 };

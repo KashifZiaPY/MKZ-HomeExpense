@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ExportPdfModal } from '../common/ExportPdfModal';
+import { SettleVendorModal } from '../vendors/SettleVendorModal';
 
 export const ExpenseHistory: React.FC = () => {
   const { expenses, categories, vendors, deleteExpense, setActiveTab, loading, requirePinAuth, showToast } = useApp();
@@ -44,6 +45,7 @@ export const ExpenseHistory: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [settlingVendorName, setSettlingVendorName] = useState<string | null>(null);
 
   // LIFO Rule: Determine the last recorded entry in the ledger (highest serial or last index)
   const lastEntry = useMemo(() => {
@@ -755,11 +757,29 @@ export const ExpenseHistory: React.FC = () => {
 
               {viewingExpense.vendor && (
                 <div className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800">
-                  <span className="text-slate-400 block mb-0.5">Vendor / Shopkeeper</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5">
-                    <Store className="w-4 h-4 text-slate-400" />
-                    {viewingExpense.vendor}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 block mb-0.5">Vendor / Shopkeeper</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5">
+                        <Store className="w-4 h-4 text-slate-400" />
+                        {viewingExpense.vendor}
+                      </span>
+                    </div>
+                    {viewingExpense.status === 'Unpaid' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const v = viewingExpense.vendor;
+                          setViewingExpense(null);
+                          setSettlingVendorName(v || '');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Settle Khaata</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -854,6 +874,13 @@ export const ExpenseHistory: React.FC = () => {
         isDestructive={true}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingId(null)}
+      />
+
+      {/* Settle Vendor Modal */}
+      <SettleVendorModal
+        isOpen={Boolean(settlingVendorName)}
+        onClose={() => setSettlingVendorName(null)}
+        vendorName={settlingVendorName || ''}
       />
     </div>
   );
