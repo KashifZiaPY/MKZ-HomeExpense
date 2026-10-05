@@ -47,9 +47,15 @@ const CATEGORY_COLORS = [
 ];
 
 export const ReportsView: React.FC = () => {
-  const { expenses, settlements, theme } = useApp();
+  const { expenses, settlements, dashboard, theme } = useApp();
   const isDark = theme === 'dark';
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+
+  const outstanding = dashboard?.finalBalance?.signedAsifPerspective ?? dashboard?.currentOutstanding ?? 0;
+  const absOutstanding = Math.abs(outstanding);
+  const isSettled = absOutstanding === 0;
+  const debtor = outstanding > 0 ? 'Asif Zia' : 'Kashif Zia';
+  const creditor = outstanding > 0 ? 'Kashif Zia' : 'Asif Zia';
 
   // 1. Monthly Spending Trend (with Asif vs Kashif breakdown)
   const monthlyData = useMemo(() => {
@@ -148,6 +154,57 @@ export const ReportsView: React.FC = () => {
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
       />
+
+      {/* Prominent Top Net Settlement Position Banner */}
+      <div
+        className={`p-5 rounded-3xl border-2 shadow-sm transition-all ${
+          isSettled
+            ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-500/80'
+            : outstanding > 0
+            ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-500/80'
+            : 'bg-sky-50/80 dark:bg-sky-950/30 border-sky-500/80'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <span
+              className={`text-[11px] font-extrabold uppercase tracking-wider block ${
+                isSettled
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : outstanding > 0
+                  ? 'text-rose-700 dark:text-rose-400'
+                  : 'text-sky-700 dark:text-sky-400'
+              }`}
+            >
+              ★ Current Net Settlement Position
+            </span>
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">
+              {isSettled
+                ? 'All Accounts Fully Settled (Rs. 0)'
+                : `${debtor.toUpperCase()} TO PAY ${formatPKR(absOutstanding)} TO ${creditor.toUpperCase()}`}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+              {isSettled
+                ? 'Neither brother has any pending payment to the other.'
+                : `${creditor} is Receivable ${formatPKR(absOutstanding)} from ${debtor} (${debtor} has a net payable of ${formatPKR(absOutstanding)} to settle).`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={`px-3 py-1.5 rounded-xl font-black text-xs ${
+                isSettled
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                  : outstanding > 0
+                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                  : 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300'
+              }`}
+            >
+              {isSettled ? 'Rs. 0 (Even)' : formatPKR(absOutstanding)}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Top 3 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -79,6 +79,7 @@ interface AppContextType {
     paidBy: BrotherName;
     paymentDate: string;
     paymentNote?: string;
+    updateVoucherDate?: boolean;
   }) => Promise<{ success: boolean; updatedCount: number; error?: string }>;
   updateApiUrl: (url: string) => void;
   toggleDemoMode: (enable: boolean) => void;
@@ -664,8 +665,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     paidBy: BrotherName;
     paymentDate: string;
     paymentNote?: string;
+    updateVoucherDate?: boolean;
   }): Promise<{ success: boolean; updatedCount: number; error?: string }> => {
-    const { vendorName, paidBy, paymentDate, paymentNote } = params;
+    const { vendorName, paidBy, paymentDate, paymentNote, updateVoucherDate = true } = params;
 
     const targetExpenses = expenses.filter(
       (e) =>
@@ -682,10 +684,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const effectivePin = getEffectivePin();
 
     // 1. Optimistic local update so UI responds instantly
-    const noteSuffix = paymentNote
-      ? ` [${paymentNote}]`
-      : ` [Lump-sum cleared on ${paymentDate} by ${paidBy}]`;
-
     setExpenses((prev) =>
       prev.map((e) => {
         if (
@@ -693,8 +691,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           e.vendor &&
           e.vendor.trim().toLowerCase() === vendorName.trim().toLowerCase()
         ) {
+          const originalDateFormatted = e.date ? String(e.date).substring(0, 10) : '';
+          const noteSuffix = paymentNote
+            ? ` [${paymentNote}]`
+            : ` [Lump-sum paid on ${paymentDate} by ${paidBy}${updateVoucherDate && originalDateFormatted ? ` | Purchased: ${originalDateFormatted}` : ''}]`;
+
           return {
             ...e,
+            date: updateVoucherDate ? paymentDate : e.date,
             status: 'Paid' as const,
             paidBy,
             details: `${e.details}${noteSuffix}`,
@@ -709,8 +713,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       let count = 0;
       for (const exp of targetExpenses) {
+        const originalDateFormatted = exp.date ? String(exp.date).substring(0, 10) : '';
+        const noteSuffix = paymentNote
+          ? ` [${paymentNote}]`
+          : ` [Lump-sum paid on ${paymentDate} by ${paidBy}${updateVoucherDate && originalDateFormatted ? ` | Purchased: ${originalDateFormatted}` : ''}]`;
+
         const updatedExpense: Expense = {
           ...exp,
+          date: updateVoucherDate ? paymentDate : exp.date,
           status: 'Paid',
           paidBy,
           details: `${exp.details}${noteSuffix}`,
@@ -723,7 +733,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       showToast(
         'Vendor Dues Cleared!',
-        `Successfully marked ${count} voucher(s) as Paid by ${paidBy} for ${vendorName}`,
+        `Successfully marked ${count} voucher(s) as Paid by ${paidBy} on ${paymentDate}`,
         'success'
       );
 

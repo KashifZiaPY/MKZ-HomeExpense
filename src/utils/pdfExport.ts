@@ -237,24 +237,143 @@ export function generateHouseholdPdfReport(
   // -------------------------------------------------------------
   // 1. HEADER (Navy block #1a2744 matching app branding)
   // -------------------------------------------------------------
-  const headerHeight = 28;
+  const headerHeight = 26;
   doc.setFillColor(26, 39, 68); // #1a2744
   doc.roundedRect(margin, cursorY, contentWidth, headerHeight, 3, 3, 'F');
 
   // App Title
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('MKZ-Household — Expense & Settlement Report', margin + 6, cursorY + 11);
+  doc.setFontSize(14.5);
+  doc.text('MKZ-Household — Expense & Settlement Report', margin + 6, cursorY + 10);
 
   // Subtitle (Period & Timestamp)
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(203, 213, 225); // slate-300
-  doc.text(`Report Period: ${fromFormatted} to ${toFormatted}`, margin + 6, cursorY + 19);
-  doc.text(`Generated: ${generatedTimestamp}`, margin + 6, cursorY + 24);
+  doc.text(`Report Period: ${fromFormatted} to ${toFormatted}`, margin + 6, cursorY + 17);
+  doc.text(`Generated: ${generatedTimestamp}`, margin + 6, cursorY + 22);
 
-  cursorY += headerHeight + 8;
+  cursorY += headerHeight + 5;
+
+  // -------------------------------------------------------------
+  // TOP PROMINENT HERO: NET SETTLEMENT PAYABLE / RECEIVABLE BANNER
+  // Located on the very top so any brother immediately recognizes how much to pay/receive
+  // -------------------------------------------------------------
+  const heroBannerHeight = 24;
+  const isRose = periodClosingSigned > 0.001; // Asif owes Kashif
+  const isSky = periodClosingSigned < -0.001; // Kashif owes Asif
+
+  if (isRose) {
+    // Soft rose tint with rose border
+    doc.setFillColor(255, 241, 242); // rose-50
+    doc.setDrawColor(225, 29, 72); // rose-600
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin, cursorY, contentWidth, heroBannerHeight, 2.5, 2.5, 'FD');
+
+    // Left accent bar
+    doc.setFillColor(190, 18, 60); // rose-700
+    doc.roundedRect(margin, cursorY, 3.5, heroBannerHeight, 1.2, 1.2, 'F');
+
+    // Top Tag
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(159, 18, 57);
+    doc.text(`★ NET SETTLEMENT POSITION FOR PERIOD ENDING: ${toFormatted.toUpperCase()}`, margin + 6, cursorY + 5.5);
+
+    // Huge Main Headline
+    doc.setFontSize(13);
+    doc.setTextColor(136, 19, 55);
+    doc.text(`ASIF ZIA TO PAY:  ${formatPdfPKR(periodClosingAmount)}  -->  TO KASHIF ZIA`, margin + 6, cursorY + 12.5);
+
+    // Sub-bar with clear breakdown & action
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(190, 18, 60);
+    doc.text(`• Asif Zia: NET PAYABLE ${formatPdfPKR(periodClosingAmount)}`, margin + 6, cursorY + 18.5);
+
+    doc.setTextColor(4, 120, 87); // emerald-700
+    doc.text(`• Kashif Zia: NET RECEIVABLE ${formatPdfPKR(periodClosingAmount)}`, margin + 70, cursorY + 18.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`(To balance the ledger for ${toFormatted}, Asif Zia needs to pay ${formatPdfPKR(periodClosingAmount)} to Kashif Zia)`, margin + 6, cursorY + 22);
+
+  } else if (isSky) {
+    // Soft sky tint with sky border
+    doc.setFillColor(240, 249, 255); // sky-50
+    doc.setDrawColor(2, 132, 199); // sky-600
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin, cursorY, contentWidth, heroBannerHeight, 2.5, 2.5, 'FD');
+
+    // Left accent bar
+    doc.setFillColor(3, 105, 161); // sky-700
+    doc.roundedRect(margin, cursorY, 3.5, heroBannerHeight, 1.2, 1.2, 'F');
+
+    // Top Tag
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(3, 105, 161);
+    doc.text(`★ NET SETTLEMENT POSITION FOR PERIOD ENDING: ${toFormatted.toUpperCase()}`, margin + 6, cursorY + 5.5);
+
+    // Huge Main Headline
+    doc.setFontSize(13);
+    doc.setTextColor(12, 74, 110);
+    doc.text(`KASHIF ZIA TO PAY:  ${formatPdfPKR(periodClosingAmount)}  -->  TO ASIF ZIA`, margin + 6, cursorY + 12.5);
+
+    // Sub-bar with clear breakdown & action
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(3, 105, 161);
+    doc.text(`• Kashif Zia: NET PAYABLE ${formatPdfPKR(periodClosingAmount)}`, margin + 6, cursorY + 18.5);
+
+    doc.setTextColor(4, 120, 87);
+    doc.text(`• Asif Zia: NET RECEIVABLE ${formatPdfPKR(periodClosingAmount)}`, margin + 70, cursorY + 18.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`(To balance the ledger for ${toFormatted}, Kashif Zia needs to pay ${formatPdfPKR(periodClosingAmount)} to Asif Zia)`, margin + 6, cursorY + 22);
+
+  } else {
+    // Balanced (Rs. 0)
+    doc.setFillColor(240, 253, 244); // emerald-50
+    doc.setDrawColor(16, 185, 129); // emerald-500
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin, cursorY, contentWidth, heroBannerHeight, 2.5, 2.5, 'FD');
+
+    // Left accent bar
+    doc.setFillColor(5, 150, 105);
+    doc.roundedRect(margin, cursorY, 3.5, heroBannerHeight, 1.2, 1.2, 'F');
+
+    // Top Tag
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(4, 120, 87);
+    doc.text(`★ NET SETTLEMENT POSITION FOR PERIOD ENDING: ${toFormatted.toUpperCase()}`, margin + 6, cursorY + 5.5);
+
+    // Huge Main Headline
+    doc.setFontSize(13);
+    doc.setTextColor(6, 78, 59);
+    doc.text(`ACCOUNTS FULLY BALANCED (RS. 0) — ALL SETTLED`, margin + 6, cursorY + 13);
+
+    // Sub-bar
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Neither brother has any pending payment to the other for the period ending ${toFormatted}.`, margin + 6, cursorY + 19);
+  }
+
+  cursorY += heroBannerHeight + 6;
+
+  // Track any lump-sum vendor settlement entries in this period
+  const lumpSumEntries = periodExpenses.filter((e) => {
+    const detailsLower = String(e.details || '').toLowerCase();
+    return detailsLower.includes('lump-sum') || detailsLower.includes('cleared on') || detailsLower.includes('paid on');
+  });
+
+  const lumpSumTotal = lumpSumEntries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   // -------------------------------------------------------------
   // 2. SUMMARY SECTION (if included)
@@ -262,7 +381,7 @@ export function generateHouseholdPdfReport(
   if (options.includeSummary) {
     // Section Header
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(26, 39, 68); // #1a2744
     doc.text('1. SUMMARY OVERVIEW & RECONCILED POSITION', margin, cursorY);
     cursorY += 4;
@@ -276,10 +395,15 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     const textLines = [
-      `• Period Closing Position (${toFormatted}): ${executiveNetHeadline}`,
+      `• Net Settlement Due: ${executiveNetHeadline}`,
       `• Action Required: ${executiveAction}`,
       `• Period Reconciliation: Started at ${periodOpeningText} on ${fromFormatted} | Net Period Change: ${periodTotalNetMovement >= 0 ? '+' : ''}${formatPdfPKR(periodTotalNetMovement)} | Closing at ${periodClosingText}`,
       `• Period Activity: Asif fronted ${formatPdfPKR(asifFrontedPeriod)} | Kashif fronted ${formatPdfPKR(kashifFrontedPeriod)} | Settlements paid: ${formatPdfPKR(totalSettlementsPeriod)}`,
+      ...(lumpSumEntries.length > 0
+        ? [
+            `• Lump-Sum Vendor Clearances in Period: ${formatPdfPKR(lumpSumTotal)} across ${lumpSumEntries.length} voucher(s) with settlement payment dates recorded`,
+          ]
+        : []),
       `• Live Overall Household Balance (as of ${todayStr}): ${liveBalanceText}`,
     ];
 
@@ -308,7 +432,7 @@ export function generateHouseholdPdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(26, 39, 68);
-    doc.text('EXECUTIVE SUMMARY & RECONCILED POSITION:', margin + calloutPadding + 2, textCursor);
+    doc.text('EXECUTIVE RECONCILIATION SUMMARY:', margin + calloutPadding + 2, textCursor);
     textCursor += 4.5;
 
     textLines.forEach((line, idx) => {
@@ -370,6 +494,15 @@ export function generateHouseholdPdfReport(
         formatPdfPKR(totalSettlementsPeriod),
         'Direct brother-to-brother reimbursement transfers in date range',
       ],
+      ...(lumpSumEntries.length > 0
+        ? [
+            [
+              'Lump-Sum Vendor Clearances (In Period)',
+              formatPdfPKR(lumpSumTotal),
+              `Shopkeeper dues cleared in lump-sum with payment dates recorded`,
+            ],
+          ]
+        : []),
       [
         `Period Closing Balance (as of ${toFormatted})`,
         periodClosingText,
@@ -419,39 +552,39 @@ export function generateHouseholdPdfReport(
         2: { cellWidth: 'auto', fontSize: 7.5, textColor: [100, 116, 139] },
       },
       didParseCell: (data) => {
-        // Highlight Period Opening Balance row (index 0)
-        if (data.section === 'body' && data.row.index === 0) {
-          data.cell.styles.fillColor = [248, 250, 252]; // slate-50
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = [30, 58, 138]; // blue-900
-          }
-        }
-        // Highlight Period Closing Balance row (index 6)
-        if (data.section === 'body' && data.row.index === 6) {
-          data.cell.styles.fillColor = [241, 245, 249]; // slate-100
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = periodClosingIsSettled ? [4, 120, 87] : [190, 18, 60]; // emerald or rose
-          }
-        }
-        // Highlight Kashif Position row (index 7)
-        if (data.section === 'body' && data.row.index === 7) {
-          data.cell.styles.fillColor = [255, 255, 255];
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = periodClosingSigned > 0.001 ? [4, 120, 87] : [30, 41, 59];
-          }
-        }
-        // Highlight Asif Position row (index 8)
-        if (data.section === 'body' && data.row.index === 8) {
-          data.cell.styles.fillColor = [255, 255, 255];
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = periodClosingSigned > 0.001 ? [190, 18, 60] : [4, 120, 87];
-          }
-        }
-        // Highlight Current Live Overall Balance row (index 9)
-        if (data.section === 'body' && data.row.index === 9) {
-          data.cell.styles.fillColor = [248, 250, 252]; // slate-50
-          if (data.column.index === 1) {
-            data.cell.styles.textColor = [71, 85, 105]; // slate-600
+        if (data.section === 'body') {
+          const metricName = String(data.row.raw ? (data.row.raw as any)[0] : '');
+
+          if (metricName.startsWith('Period Opening Balance')) {
+            data.cell.styles.fillColor = [248, 250, 252]; // slate-50
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = [30, 58, 138]; // blue-900
+            }
+          } else if (metricName.startsWith('Period Closing Balance')) {
+            data.cell.styles.fillColor = [241, 245, 249]; // slate-100
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = periodClosingIsSettled ? [4, 120, 87] : [190, 18, 60]; // emerald or rose
+            }
+          } else if (metricName.startsWith('Kashif Zia Net Position')) {
+            data.cell.styles.fillColor = [255, 255, 255];
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = periodClosingSigned > 0.001 ? [4, 120, 87] : [30, 41, 59];
+            }
+          } else if (metricName.startsWith('Asif Zia Net Position')) {
+            data.cell.styles.fillColor = [255, 255, 255];
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = periodClosingSigned > 0.001 ? [190, 18, 60] : [4, 120, 87];
+            }
+          } else if (metricName.startsWith('Lump-Sum Vendor Clearances')) {
+            data.cell.styles.fillColor = [254, 252, 232]; // amber-50
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = [180, 83, 9]; // amber-700
+            }
+          } else if (metricName.startsWith('Current Live Overall Balance')) {
+            data.cell.styles.fillColor = [248, 250, 252]; // slate-50
+            if (data.column.index === 1) {
+              data.cell.styles.textColor = [71, 85, 105]; // slate-600
+            }
           }
         }
       },

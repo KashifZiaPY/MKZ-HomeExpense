@@ -37,6 +37,7 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
   const [paidBy, setPaidBy] = useState<BrotherName>('Asif Zia');
   const [paymentDate, setPaymentDate] = useState<string>(() => getTodayDateString());
   const [paymentNote, setPaymentNote] = useState<string>('');
+  const [updateVoucherDate, setUpdateVoucherDate] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showVoucherList, setShowVoucherList] = useState<boolean>(true);
 
@@ -87,6 +88,7 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
           paidBy,
           paymentDate,
           paymentNote: paymentNote.trim() || `Lump-sum cleared by ${paidBy}`,
+          updateVoucherDate,
         });
 
         if (result.success) {
@@ -282,7 +284,7 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>Settlement Date</span>
+              <span>Lump-Sum Payment Date</span>
             </label>
             <input
               id="settle-date-input"
@@ -292,6 +294,17 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
               onChange={(e) => setPaymentDate(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            <label className="mt-2 flex items-start gap-2 cursor-pointer select-none text-[11px] text-slate-600 dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={updateVoucherDate}
+                onChange={(e) => setUpdateVoucherDate(e.target.checked)}
+                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>
+                Record payment date ({paymentDate}) as the voucher transaction date so this lump-sum payment is accurately attributed in this month&apos;s financial statement (original purchase date is preserved in notes).
+              </span>
+            </label>
           </div>
 
           {/* Note / Reference */}
