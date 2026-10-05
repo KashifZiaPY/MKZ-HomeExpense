@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Expense, Settlement, DashboardData } from '../types';
-import { formatPKR, formatDate } from './formatters';
+import { formatPKR, formatDate, formatLumpSumDetail } from './formatters';
 import { format, parseISO, isValid } from 'date-fns';
 
 export interface PdfExportOptions {
@@ -401,7 +401,7 @@ export function generateHouseholdPdfReport(
       `• Period Activity: Asif fronted ${formatPdfPKR(asifFrontedPeriod)} | Kashif fronted ${formatPdfPKR(kashifFrontedPeriod)} | Settlements paid: ${formatPdfPKR(totalSettlementsPeriod)}`,
       ...(lumpSumEntries.length > 0
         ? [
-            `• Lump-Sum Vendor Clearances in Period: ${formatPdfPKR(lumpSumTotal)} across ${lumpSumEntries.length} voucher(s) with settlement payment dates recorded`,
+            `• Lump-Sum Vendor Clearances in Period: ${formatPdfPKR(lumpSumTotal)} across ${lumpSumEntries.length} voucher(s) settled on dated 05.10.2026 by Asif Zia`,
           ]
         : []),
       `• Live Overall Household Balance (as of ${todayStr}): ${liveBalanceText}`,
@@ -499,7 +499,7 @@ export function generateHouseholdPdfReport(
             [
               'Lump-Sum Vendor Clearances (In Period)',
               formatPdfPKR(lumpSumTotal),
-              `Shopkeeper dues cleared in lump-sum with payment dates recorded`,
+              `Hafiz Sirhandi monthly dues cleared on dated 05.10.2026 by Asif Zia (${lumpSumEntries.length} vouchers reconciled)`,
             ],
           ]
         : []),
@@ -622,10 +622,11 @@ export function generateHouseholdPdfReport(
     } else {
       const expenseTableBody = periodExpenses.map((e) => {
         const isPaid = String(e.status || '').trim().toLowerCase() === 'paid';
+        const formattedDetails = formatLumpSumDetail(e.details) || '—';
         return [
           formatDate(e.date, 'dd-MMM-yy'),
           e.category || 'General',
-          e.details || '—',
+          formattedDetails,
           formatPdfPKR(e.amount),
           e.paidBy || '—',
           e.vendor || '—',

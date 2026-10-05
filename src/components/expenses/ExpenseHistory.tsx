@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Expense, BrotherName, VendorStatus } from '../../types';
-import { formatPKR, formatDate, exportExpensesToCSV } from '../../utils/formatters';
+import { formatPKR, formatDate, exportExpensesToCSV, formatLumpSumDetail } from '../../utils/formatters';
 import { EditExpenseModal } from './EditExpenseModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
@@ -482,7 +482,7 @@ export const ExpenseHistory: React.FC = () => {
                         </span>
                         {exp.details && (
                           <span className="text-slate-500 dark:text-slate-400 text-[11px] block truncate max-w-xs mt-0.5">
-                            {exp.details}
+                            {formatLumpSumDetail(exp.details)}
                           </span>
                         )}
                       </td>
@@ -588,7 +588,7 @@ export const ExpenseHistory: React.FC = () => {
                       </div>
                       {exp.details && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                          {exp.details}
+                          {formatLumpSumDetail(exp.details)}
                         </p>
                       )}
                     </div>
@@ -787,7 +787,7 @@ export const ExpenseHistory: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800">
                   <span className="text-slate-400 block mb-0.5">Particulars / Details</span>
                   <p className="font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {viewingExpense.details}
+                    {formatLumpSumDetail(viewingExpense.details)}
                   </p>
                 </div>
               )}

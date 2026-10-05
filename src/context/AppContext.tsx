@@ -20,6 +20,7 @@ import {
   isDemoModeExplicit,
   setDemoModeExplicit,
 } from '../services/api';
+import { formatDate } from '../utils/formatters';
 
 interface AppContextType {
   // Auth & PIN gate
@@ -682,6 +683,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const effectivePin = getEffectivePin();
+    const formattedPaymentDate = formatDate(paymentDate, 'dd.MM.yyyy');
+    const defaultNote = `Lump-sum cleared by ${paidBy} on dated ${formattedPaymentDate}`;
+    const cleanNote = paymentNote && paymentNote.includes('dated') ? paymentNote : defaultNote;
 
     // 1. Optimistic local update so UI responds instantly
     setExpenses((prev) =>
@@ -691,10 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           e.vendor &&
           e.vendor.trim().toLowerCase() === vendorName.trim().toLowerCase()
         ) {
-          const originalDateFormatted = e.date ? String(e.date).substring(0, 10) : '';
-          const noteSuffix = paymentNote
-            ? ` [${paymentNote}]`
-            : ` [Lump-sum paid on ${paymentDate} by ${paidBy}${updateVoucherDate && originalDateFormatted ? ` | Purchased: ${originalDateFormatted}` : ''}]`;
+          const noteSuffix = ` [${cleanNote}]`;
 
           return {
             ...e,
@@ -713,10 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       let count = 0;
       for (const exp of targetExpenses) {
-        const originalDateFormatted = exp.date ? String(exp.date).substring(0, 10) : '';
-        const noteSuffix = paymentNote
-          ? ` [${paymentNote}]`
-          : ` [Lump-sum paid on ${paymentDate} by ${paidBy}${updateVoucherDate && originalDateFormatted ? ` | Purchased: ${originalDateFormatted}` : ''}]`;
+        const noteSuffix = ` [${cleanNote}]`;
 
         const updatedExpense: Expense = {
           ...exp,

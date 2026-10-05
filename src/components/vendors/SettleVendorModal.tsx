@@ -67,7 +67,7 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
           ? 'Kashif Zia'
           : 'Asif Zia';
       setPaidBy(defaultPayer as BrotherName);
-      setPaymentNote(`Lump-sum cleared by ${defaultPayer}`);
+      setPaymentNote(`Lump-sum cleared by ${defaultPayer} on dated ${formatDate(getTodayDateString(), 'dd.MM.yyyy')}`);
     }
   }, [isOpen, initialPayer]);
 
@@ -83,11 +83,13 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
     requirePinAuth(async () => {
       setIsSubmitting(true);
       try {
+        const formattedDateStr = formatDate(paymentDate, 'dd.MM.yyyy');
+        const defaultNote = `Lump-sum cleared by ${paidBy} on dated ${formattedDateStr}`;
         const result = await batchSettleVendorDues({
           vendorName,
           paidBy,
           paymentDate,
-          paymentNote: paymentNote.trim() || `Lump-sum cleared by ${paidBy}`,
+          paymentNote: paymentNote.trim() || defaultNote,
           updateVoucherDate,
         });
 
@@ -220,7 +222,8 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
                 id="payer-asif-btn"
                 onClick={() => {
                   setPaidBy('Asif Zia');
-                  setPaymentNote('Lump-sum cleared by Asif Zia');
+                  const dStr = formatDate(paymentDate, 'dd.MM.yyyy');
+                  setPaymentNote(`Lump-sum cleared by Asif Zia on dated ${dStr}`);
                 }}
                 className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   paidBy === 'Asif Zia'
@@ -244,7 +247,8 @@ export const SettleVendorModal: React.FC<SettleVendorModalProps> = ({
                 id="payer-kashif-btn"
                 onClick={() => {
                   setPaidBy('Kashif Zia');
-                  setPaymentNote('Lump-sum cleared by Kashif Zia');
+                  const dStr = formatDate(paymentDate, 'dd.MM.yyyy');
+                  setPaymentNote(`Lump-sum cleared by Kashif Zia on dated ${dStr}`);
                 }}
                 className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   paidBy === 'Kashif Zia'

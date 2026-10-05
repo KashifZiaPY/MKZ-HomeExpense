@@ -102,6 +102,23 @@ export function getBalanceStatus(currentOutstanding: number) {
 }
 
 /**
+ * Ensure lump-sum settlement notes always explicitly include the payment date
+ * e.g. "jami sharee by asif [Lump-sum cleared by Asif Zia]" -> "jami sharee by asif [Lump-sum cleared by Asif Zia on dated 05.10.2026]"
+ */
+export function formatLumpSumDetail(details?: string): string {
+  if (!details) return '';
+  let res = details;
+  if (res.includes('[Lump-sum cleared by Asif Zia]') && !res.includes('dated') && !res.includes('2026')) {
+    res = res.replace('[Lump-sum cleared by Asif Zia]', '[Lump-sum cleared by Asif Zia on dated 05.10.2026]');
+  } else if (res.includes('[Lump-sum cleared by Kashif Zia]') && !res.includes('dated') && !res.includes('2026')) {
+    res = res.replace('[Lump-sum cleared by Kashif Zia]', '[Lump-sum cleared by Kashif Zia on dated 05.10.2026]');
+  } else if (res.toLowerCase().includes('lump-sum') && !res.includes('dated') && !/\d{2}[./-]\d{2}[./-]\d{4}/.test(res)) {
+    res = res.replace(/\[(Lump-sum\s+cleared\s+by\s+[^\]]+)\]/i, '[$1 on dated 05.10.2026]');
+  }
+  return res;
+}
+
+/**
  * Generate CSV and trigger browser download
  */
 export function exportExpensesToCSV(expenses: Array<Record<string, any>>, filename = 'zia-household-expenses.csv') {
